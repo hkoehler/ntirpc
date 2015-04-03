@@ -1,0 +1,18 @@
+import wsbld
+class NTIRPCMakeModuleEnvironment(wsbld.CMakeModuleEnvironment):
+   def __init__(self, modName, srcPath, env, parent, conf=None):
+      wsbld.CMakeModuleEnvironment.__init__(self, modName, srcPath, env, parent, conf)
+      self['CMAKE_MODPATH'] = '/src'
+      self['CMAKE_ARGS'] = ''
+      self['CC'] = '/usr/bin/gcc'
+      self['CXX'] = '/usr/bin/g++'
+      self['CFLAGS'] = ''
+
+   def execOp(self, opName):
+      return wsbld.CMakeModuleEnvironment.execOp(self, opName)
+
+ENV_TYPE = wsbld.CMakeModuleEnvironment
+VERSION = "4.2.0"
+GROUPID = "com.pernixdata.libntirpc"
+ARTIFACTS = [ wsbld.CMakeDeb("libntirpc", "lib", mode=wsbld.Artifact.RUN_MODE),
+              wsbld.CMakeDeb("libntirpc", "dev", mode=wsbld.Artifact.DEV_MODE) ]

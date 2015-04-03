@@ -110,9 +110,8 @@ if(USE_NFS_MSK)
   xdr_msk.c
   )
 endif(USE_NFS_MSK)
-
 # declares the library
-add_library(ntirpc STATIC
+add_library(ntirpc SHARED 
   ${ntirpc_common_SRCS}
   ${ntirpc_des_SRCS}
   ${ntirpc_gss_SRCS}
@@ -125,7 +124,7 @@ target_link_libraries(ntirpc ${CMAKE_THREAD_LIBS_INIT})
 
 # fixme!
 set_target_properties(ntirpc PROPERTIES VERSION 4.2.0 SOVERSION 4)
-install(TARGETS ntirpc DESTINATION bin)
+install(TARGETS ntirpc EXPORT NTIRPC LIBRARY DESTINATION lib COMPONENT lib)
 
 ########### install files ###############
 
