@@ -217,7 +217,7 @@ svc_xprt_set_impl(SVCXPRT *xprt, uint32_t flags)
 				srec->xprt = xprt;
 		}
 		mutex_unlock(&srec->mtx);
-	} else {
+	} else if (!(flags & SVC_XPRT_FLAG_CLEAR)) {
 		/* no srec */
 		xprt2 =
 		    svc_xprt_insert(xprt,
