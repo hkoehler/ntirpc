@@ -175,11 +175,6 @@ rpc_ctx_wait_reply(rpc_ctx_t *ctx, uint32_t flags)
 			SVCXPRT *xprt = rec->hdl.xprt;
 			uint32_t xp_flags;
 
-			/* dequeue the call */
-			REC_LOCK(rec);
-			opr_rbtree_remove(&xd->cx.calls.t, &ctx->node_k);
-			REC_UNLOCK(rec);
-
 			mutex_lock(&xprt->xp_lock);
 			xp_flags = xprt->xp_flags;
 			mutex_unlock(&xprt->xp_lock);
