@@ -124,29 +124,25 @@ rpc_ctx_xfer_replymsg(struct x_vc_data *xd, struct rpc_msg *msg)
 {
 	rpc_ctx_t ctx_k, *ctx;
 	struct opr_rbtree_node *nv;
-	rpc_dplx_lock_t *lk = &xd->rec->recv.lock;
 
 	ctx_k.xid = msg->rm_xid;
 	REC_LOCK(xd->rec);
 	nv = opr_rbtree_lookup(&xd->cx.calls.t, &ctx_k.node_k);
 	if (nv) {
 		ctx = opr_containerof(nv, rpc_ctx_t, node_k);
-		opr_rbtree_remove(&xd->cx.calls.t, &ctx->node_k);
 		free_rpc_msg(ctx->msg);	/* free call header */
 		ctx->msg = msg;	/* and stash reply header */
 		ctx->flags |= RPC_CTX_FLAG_SYNCDONE;
 		REC_UNLOCK(xd->rec);
-		cond_signal(&lk->we.cv);	/* XXX we hold lk->we.mtx */
-		/* now, we must ourselves wait for the other side to run */
-		while (!(ctx->flags & RPC_CTX_FLAG_ACKSYNC))
-			cond_wait(&lk->we.cv, &lk->we.mtx);
-
+      __warnx(TIRPC_DEBUG_FLAG_RPC_CTX,
+         "%s: reply received (xid %d client %p, dir %d)",
+         __func__, ctx->xid, ctx->ctx_u.clnt.clnt, msg->rm_direction);
 		/* ctx-specific signal--indicates we will make no further
 		 * references to ctx whatsoever */
 		mutex_lock(&ctx->we.mtx);
 		ctx->flags &= ~RPC_CTX_FLAG_WAITSYNC;
-		cond_signal(&ctx->we.cv);
-		mutex_unlock(&ctx->we.mtx);
+      cond_signal(&ctx->we.cv);
+      mutex_unlock(&ctx->we.mtx);
 
 		return (true);
 	}
@@ -161,14 +157,15 @@ rpc_ctx_wait_reply(rpc_ctx_t *ctx, uint32_t flags)
 	struct rpc_dplx_rec *rec = xd->rec;
 	rpc_dplx_lock_t *lk = &rec->recv.lock;
 	struct timespec ts;
+	CLIENT *clnt = ctx->ctx_u.clnt.clnt;
 	int code = 0;
 
-	/* we hold recv channel lock */
 	ctx->flags |= RPC_CTX_FLAG_WAITSYNC;
+   mutex_lock(&ctx->we.mtx);
 	while (!(ctx->flags & RPC_CTX_FLAG_SYNCDONE)) {
 		(void)clock_gettime(CLOCK_REALTIME_FAST, &ts);
 		timespecadd(&ts, &ctx->ctx_u.clnt.timeout);
-		code = cond_timedwait(&lk->we.cv, &lk->we.mtx, &ts);
+		code = cond_timedwait(&ctx->we.cv, &ctx->we.mtx, &ts);
 		/* if we timed out, check for xprt destroyed (no more
 		 * receives) */
 		if (code == ETIMEDOUT) {
@@ -185,7 +182,14 @@ rpc_ctx_wait_reply(rpc_ctx_t *ctx, uint32_t flags)
 				ctx->error.re_status = RPC_TIMEDOUT;
 			}
 			ctx->flags &= ~RPC_CTX_FLAG_WAITSYNC;
+         __warnx(TIRPC_DEBUG_FLAG_RPC_CTX,
+            "%s: reply timed out (xid %d, client %p)",
+            __func__, ctx->xid, clnt);
 			goto out;
+		} else {
+	      __warnx(TIRPC_DEBUG_FLAG_RPC_CTX,
+	         "%s: reply ready (xid %d, client %p, dir %d)",
+	         __func__, ctx->xid, clnt, ctx->msg->rm_direction);
 		}
 	}
 	ctx->flags &= ~RPC_CTX_FLAG_SYNCDONE;
@@ -193,8 +197,8 @@ rpc_ctx_wait_reply(rpc_ctx_t *ctx, uint32_t flags)
 	/* switch on direction */
 	switch (ctx->msg->rm_direction) {
 	case REPLY:
-		if (ctx->msg->rm_xid == ctx->xid)
-			return (RPC_SUCCESS);
+		assert(ctx->msg->rm_xid == ctx->xid);
+      code = RPC_SUCCESS;
 		break;
 	case CALL:
 		/* XXX cond transfer control to svc */
@@ -205,6 +209,7 @@ rpc_ctx_wait_reply(rpc_ctx_t *ctx, uint32_t flags)
 	}
 
  out:
+   mutex_unlock(&ctx->we.mtx);
 	return (code);
 }
 

@@ -361,7 +361,6 @@ clnt_vc_call(CLIENT *clnt, AUTH *auth, rpcproc_t proc,
 	rpc_ctx_t *ctx = NULL;
 	XDR *xdrs;
 	int code, refreshes = 2;
-	bool ctx_needack = false;
 	bool bidi = (rec->hdl.xprt != NULL);
 	bool shipnow;
 	bool gss = false;
@@ -466,20 +465,23 @@ clnt_vc_call(CLIENT *clnt, AUTH *auth, rpcproc_t proc,
 	xdrs->x_lib[1] = (void *)ctx;	/* transiently thread call ctx */
 
 	if (bidi) {
+	   rpc_dplx_ruc(clnt);
 		code = rpc_ctx_wait_reply(ctx, RPC_DPLX_FLAG_LOCKED);/* RECV! */
 		if (code == ETIMEDOUT) {
 			/* UL can retry, we dont.  This CAN indicate xprt
 			 * destroyed (error status already set). */
 			ctx->error.re_status = RPC_TIMEDOUT;
-			goto unlock;
+			goto out;
 		}
+	   rpc_dplx_rlc(clnt); // XXX lock again?
 		/* switch on direction */
 		switch (ctx->msg->rm_direction) {
 		case REPLY:
-			if (ctx->msg->rm_xid == ctx->xid) {
-				ctx_needack = true;
-				goto replied;
-			}
+         __warnx(TIRPC_DEBUG_FLAG_CLNT_VC,
+		           "%s: reply rm_xid %d xid %d\n",
+		           __func__,
+		           ctx->msg->rm_xid,
+		           ctx->xid);
 			break;
 		case CALL:
 			/* in this configuration, we do not expect calls */
@@ -546,16 +548,12 @@ clnt_vc_call(CLIENT *clnt, AUTH *auth, rpcproc_t proc,
 			(void)xdr_opaque_auth(xdrs,
 					      &(ctx->msg->acpted_rply.ar_verf));
 		}
-		if (ctx_needack)
-			rpc_ctx_ack_xfer(ctx);
 	} /* end successful completion */
 	else {
 		/* maybe our credentials need to be refreshed ... */
 		if (refreshes-- && AUTH_REFRESH(auth, &(ctx->msg))) {
 			rpc_ctx_next_xid(ctx, RPC_CTX_FLAG_NONE);
 			rpc_dplx_ruc(clnt);
-			if (ctx_needack)
-				rpc_ctx_ack_xfer(ctx);
 			goto call_again;
 		}
 	}			/* end of unsuccessful completion */

@@ -1172,8 +1172,8 @@ svc_vc_recv(SVCXPRT *xprt, struct svc_req *req)
 			break;
 		case REPLY:
 			/* reply header (xprt OK) */
-			rpc_ctx_xfer_replymsg(xd, req->rq_msg);
-			req->rq_msg = NULL;
+			if (rpc_ctx_xfer_replymsg(xd, req->rq_msg))
+   			req->rq_msg = NULL;
 			break;
 		default:
 			/* not good (but xprt OK) */
