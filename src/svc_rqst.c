@@ -594,6 +594,8 @@ svc_rqst_evchan_unreg(uint32_t chan_id, SVCXPRT *xprt, uint32_t flags)
 		if (flags & SVC_RQST_FLAG_MUTEX_LOCKED)
 			mutex_unlock(&xprt->xp_lock);
 		goto unlock;
+	} else {
+	   code = 0;
 	}
 
 	evchan_unreg_impl(sr_rec, xprt, SVC_RQST_FLAG_LOCK);
