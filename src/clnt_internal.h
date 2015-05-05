@@ -57,6 +57,7 @@ typedef struct rpc_dplx_lock {
 	struct {
 		const char *func;
 		int line;
+		int locked;
 	} locktrace;
 } rpc_dplx_lock_t;
 

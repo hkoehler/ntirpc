@@ -33,6 +33,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <signal.h>
+#include <assert.h>
 
 #include <rpc/types.h>
 #include <rpc/rpc.h>
@@ -56,8 +57,10 @@ rpc_dplx_slxi(SVCXPRT *xprt, const char *func, int line)
 	rpc_dplx_lock_t *lk = &rec->send.lock;
 	mutex_lock(&lk->we.mtx);
 	if (__pkg_params.debug_flags & TIRPC_DEBUG_FLAG_LOCK) {
+      assert(lk->locktrace.locked == FALSE);
 		lk->locktrace.func = (char *)func;
 		lk->locktrace.line = line;
+      lk->locktrace.locked = TRUE;
 	}
 }
 
@@ -65,6 +68,10 @@ void
 rpc_dplx_sux(SVCXPRT *xprt)
 {
 	struct rpc_dplx_rec *rec = (struct rpc_dplx_rec *)xprt->xp_p5;
+   if (__pkg_params.debug_flags & TIRPC_DEBUG_FLAG_LOCK) {
+      assert(rec->send.lock.locktrace.locked == TRUE);
+      rec->send.lock.locktrace.locked = FALSE;
+   }
 	mutex_unlock(&rec->send.lock.we.mtx);
 }
 
@@ -75,8 +82,10 @@ rpc_dplx_rlxi(SVCXPRT *xprt, const char *func, int line)
 	rpc_dplx_lock_t *lk = &rec->recv.lock;
 	mutex_lock(&lk->we.mtx);
 	if (__pkg_params.debug_flags & TIRPC_DEBUG_FLAG_LOCK) {
+	   assert(lk->locktrace.locked == FALSE);
 		lk->locktrace.func = (char *)func;
 		lk->locktrace.line = line;
+      lk->locktrace.locked = TRUE;
 	}
 }
 
@@ -84,6 +93,10 @@ void
 rpc_dplx_rux(SVCXPRT *xprt)
 {
 	struct rpc_dplx_rec *rec = (struct rpc_dplx_rec *)xprt->xp_p5;
+   if (__pkg_params.debug_flags & TIRPC_DEBUG_FLAG_LOCK) {
+      assert(rec->recv.lock.locktrace.locked == TRUE);
+      rec->recv.lock.locktrace.locked = FALSE;
+   }
 	mutex_unlock(&rec->recv.lock.we.mtx);
 }
 
@@ -95,8 +108,10 @@ rpc_dplx_slci(CLIENT *clnt, const char *func, int line)
 
 	mutex_lock(&lk->we.mtx);
 	if (__pkg_params.debug_flags & TIRPC_DEBUG_FLAG_LOCK) {
+      assert(lk->locktrace.locked == FALSE);
 		lk->locktrace.func = (char *)func;
 		lk->locktrace.line = line;
+      lk->locktrace.locked = TRUE;
 	}
 }
 
@@ -104,6 +119,10 @@ void
 rpc_dplx_suc(CLIENT *clnt)
 {
 	struct rpc_dplx_rec *rec = (struct rpc_dplx_rec *)clnt->cl_p2;
+   if (__pkg_params.debug_flags & TIRPC_DEBUG_FLAG_LOCK) {
+      assert(rec->send.lock.locktrace.locked == TRUE);
+      rec->send.lock.locktrace.locked = FALSE;
+   }
 	mutex_unlock(&rec->send.lock.we.mtx);
 }
 
@@ -115,8 +134,10 @@ rpc_dplx_rlci(CLIENT *clnt, const char *func, int line)
 
 	mutex_lock(&lk->we.mtx);
 	if (__pkg_params.debug_flags & TIRPC_DEBUG_FLAG_LOCK) {
+      assert(lk->locktrace.locked == FALSE);
 		lk->locktrace.func = (char *)func;
-		lk->locktrace.line = line;
+      lk->locktrace.line = line;
+      lk->locktrace.locked = TRUE;
 	}
 }
 
@@ -124,6 +145,10 @@ void
 rpc_dplx_ruc(CLIENT *clnt)
 {
 	struct rpc_dplx_rec *rec = (struct rpc_dplx_rec *)clnt->cl_p2;
+   if (__pkg_params.debug_flags & TIRPC_DEBUG_FLAG_LOCK) {
+      assert(rec->recv.lock.locktrace.locked == TRUE);
+      rec->recv.lock.locktrace.locked = FALSE;
+   }
 	mutex_unlock(&rec->recv.lock.we.mtx);
 }
 
@@ -298,8 +323,10 @@ rpc_dplx_slfi(int fd, const char *func, int line)
 
 	mutex_lock(&lk->we.mtx);
 	if (__pkg_params.debug_flags & TIRPC_DEBUG_FLAG_LOCK) {
+      assert(lk->locktrace.locked == FALSE);
 		lk->locktrace.func = (char *)func;
 		lk->locktrace.line = line;
+      lk->locktrace.locked = TRUE;
 	}
 
 }
@@ -311,6 +338,10 @@ rpc_dplx_suf(int fd)
 	struct rpc_dplx_rec *rec =
 	    rpc_dplx_lookup_rec(fd, RPC_DPLX_FLAG_NONE, &oflags);
 	/* assert: initialized */
+   if (__pkg_params.debug_flags & TIRPC_DEBUG_FLAG_LOCK) {
+      assert(rec->send.lock.locktrace.locked == TRUE);
+      rec->send.lock.locktrace.locked = FALSE;
+   }
 	mutex_unlock(&rec->send.lock.we.mtx);
 }
 
@@ -324,8 +355,10 @@ rpc_dplx_rlfi(int fd, const char *func, int line)
 
 	mutex_lock(&lk->we.mtx);
 	if (__pkg_params.debug_flags & TIRPC_DEBUG_FLAG_LOCK) {
+      assert(lk->locktrace.locked == FALSE);
 		lk->locktrace.func = (char *)func;
 		lk->locktrace.line = line;
+      lk->locktrace.locked = TRUE;
 	}
 }
 
@@ -336,6 +369,10 @@ rpc_dplx_ruf(int fd)
 	struct rpc_dplx_rec *rec =
 	    rpc_dplx_lookup_rec(fd, RPC_DPLX_FLAG_NONE, &oflags);
 	/* assert: initialized */
+   if (__pkg_params.debug_flags & TIRPC_DEBUG_FLAG_LOCK) {
+      assert(rec->recv.lock.locktrace.locked == TRUE);
+      rec->recv.lock.locktrace.locked = FALSE;
+   }
 	mutex_unlock(&rec->recv.lock.we.mtx);
 }
 

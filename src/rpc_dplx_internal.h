@@ -71,6 +71,7 @@ rpc_dplx_lock_init(struct rpc_dplx_lock *lock)
 	lock->lock_flag_value = 0;
 	mutex_init(&lock->we.mtx, NULL);
 	cond_init(&lock->we.cv, 0, NULL);
+	lock->locktrace.locked = FALSE;
 }
 
 static inline void
