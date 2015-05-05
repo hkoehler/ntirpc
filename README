@@ -42,7 +42,7 @@ The previous release was TIRPCSRC 2.0.
 	an allocated structure where results will be placed by the stub.  See
 	the rpcgen manual page and the rpcgen Programming Guide for details.
 
-What's New in ntirpc
+What's New in ntirpc?
 
 Non-cosmetic changes introduced in the ntirpc library include
 
