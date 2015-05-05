@@ -665,14 +665,18 @@ svc_rqst_rearm_events(SVCXPRT *xprt, uint32_t __attribute__ ((unused)) flags)
 	cond_init_svc_rqst();
 
 	xp_ev = (struct svc_xprt_ev *)xprt->xp_ev;
-	sr_rec = xp_ev->sr_rec;
 
 	/* Don't rearm a destroyed (but not yet collected) xprx */
 	if (xprt->xp_flags & SVC_XPRT_FLAG_DESTROYED)
 		goto out;
 
 	/* MUST follow the destroyed check above */
-	assert(sr_rec);
+   assert(xp_ev);
+   sr_rec = xp_ev->sr_rec;
+   if (!(xprt->xp_flags & SVC_XPRT_FLAG_EVCHAN))
+      goto out;
+   /* MUST follow the event channel check above */
+   assert(sr_rec);
 
 	mutex_lock(&sr_rec->mtx);
 	if (xp_ev->flags & XP_EV_FLAG_ADDED) {
