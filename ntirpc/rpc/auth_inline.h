@@ -44,7 +44,7 @@
  */
 
 #ifndef _TIRPC_AUTH_INLINE_H
-#define _TIRPC_AUTH__INLINE_H
+#define _TIRPC_AUTH_INLINE_H
 
 #include <rpc/xdr_inline.h>
 #include <rpc/auth.h>
