@@ -13,6 +13,6 @@ class NTIRPCMakeModuleEnvironment(wsbld.CMakeModuleEnvironment):
 
 ENV_TYPE = wsbld.CMakeModuleEnvironment
 VERSION = "4.2.0"
-GROUPID = "com.pernixdata.libntirpc"
+GROUPID = "com.pernixdata.ext"
 ARTIFACTS = [ wsbld.CMakeDeb("libntirpc", "lib", mode=wsbld.Artifact.RUN_MODE),
               wsbld.CMakeDeb("libntirpc", "dev", mode=wsbld.Artifact.DEV_MODE) ]
