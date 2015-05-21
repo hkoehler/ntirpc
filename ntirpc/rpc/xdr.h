@@ -392,6 +392,8 @@ extern bool xdr_u_longlong_t(XDR *, u_quad_t *);
 
 #define xdr_quad_t  xdr_int64_t
 #define xdr_uquad_t xdr_uint64_t
+#define xdr_int8_t xdr_char
+#define xdr_uint8_t xdr_u_char
 
 __END_DECLS
 /*
