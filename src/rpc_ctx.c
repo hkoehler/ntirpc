@@ -48,7 +48,7 @@
 #define tv_to_ms(tv) (1000 * ((tv)->tv_sec) + (tv)->tv_usec/1000)
 
 rpc_ctx_t *
-alloc_rpc_call_ctx(CLIENT *clnt, rpcproc_t proc, xdrproc_t xdr_args,
+alloc_rpc_call_ctx(CLIENT *clnt, rpcproc_t proc, AUTH *auth, xdrproc_t xdr_args,
 		   void *args_ptr, xdrproc_t xdr_results,
 		   void *results_ptr, struct timeval timeout)
 {
@@ -74,8 +74,12 @@ alloc_rpc_call_ctx(CLIENT *clnt, rpcproc_t proc, xdrproc_t xdr_args,
 	 * fully async calls */
 	ctx->ctx_u.clnt.clnt = clnt;
 	ctx->ctx_u.clnt.timeout.tv_sec = 0;
-	ctx->ctx_u.clnt.timeout.tv_nsec = 0;
+   ctx->ctx_u.clnt.timeout.tv_nsec = 0;
 	timespec_addms(&ctx->ctx_u.clnt.timeout, tv_to_ms(&timeout));
+   ctx->ctx_u.clnt.xdr_results = xdr_results;
+   ctx->ctx_u.clnt.results_ptr = results_ptr;
+   ctx->ctx_u.clnt.auth = auth;
+
 	ctx->msg = alloc_rpc_msg();
 	ctx->flags = 0;
 
@@ -119,6 +123,35 @@ rpc_ctx_next_xid(rpc_ctx_t *ctx, uint32_t flags)
 	return;
 }
 
+void
+rpc_ctx_decode_replymsg(rpc_ctx_t *ctx)
+{
+   CLIENT *clnt = ctx->ctx_u.clnt.clnt;
+   struct x_vc_data *xd = (struct x_vc_data *)clnt->cl_p1;
+   XDR *xdrs = &(xd->shared.xdrs_in);
+   AUTH *auth = ctx->ctx_u.clnt.auth;
+   xdrproc_t xdr_results = ctx->ctx_u.clnt.xdr_results;
+   void *results_ptr = ctx->ctx_u.clnt.results_ptr;
+
+   _seterr_reply(ctx->msg, &(ctx->error));
+   if (ctx->error.re_status == RPC_SUCCESS) {
+      if (!AUTH_VALIDATE(auth, &(ctx->msg->acpted_rply.ar_verf))) {
+         ctx->error.re_status = RPC_AUTHERROR;
+         ctx->error.re_why = AUTH_INVALIDRESP;
+      } else if (xdr_results /* XXX caller setup error? */ &&
+            !AUTH_UNWRAP(auth, xdrs, xdr_results, results_ptr)) {
+         if (ctx->error.re_status == RPC_SUCCESS)
+            ctx->error.re_status = RPC_CANTDECODERES;
+      }
+      /* free verifier ... */
+      if (ctx->msg->acpted_rply.ar_verf.oa_base != NULL) {
+         xdrs->x_op = XDR_FREE;
+         (void)xdr_opaque_auth(xdrs,
+                     &(ctx->msg->acpted_rply.ar_verf));
+      }
+   }
+}
+
 bool
 rpc_ctx_xfer_replymsg(struct x_vc_data *xd, struct rpc_msg *msg)
 {
@@ -137,6 +170,7 @@ rpc_ctx_xfer_replymsg(struct x_vc_data *xd, struct rpc_msg *msg)
       __warnx(TIRPC_DEBUG_FLAG_RPC_CTX,
          "%s: reply received (xid %d client %p, dir %d)",
          __func__, ctx->xid, ctx->ctx_u.clnt.clnt, msg->rm_direction);
+      rpc_ctx_decode_replymsg(ctx);
 		/* ctx-specific signal--indicates we will make no further
 		 * references to ctx whatsoever */
 		mutex_lock(&ctx->we.mtx);

@@ -385,7 +385,7 @@ clnt_vc_call(CLIENT *clnt, AUTH *auth, rpcproc_t proc,
 	 * call contexts.  We'll keep the call parameters, control transfer
 	 * machinery, etc, in an rpc_ctx_t, to permit this.
 	 */
-	ctx = alloc_rpc_call_ctx(clnt, proc, xdr_args, args_ptr, xdr_results,
+	ctx = alloc_rpc_call_ctx(clnt, proc, auth, xdr_args, args_ptr, xdr_results,
 				 results_ptr, timeout);	/*add total timeout? */
 
 	if (!ct->ct_waitset) {
@@ -530,26 +530,10 @@ clnt_vc_call(CLIENT *clnt, AUTH *auth, rpcproc_t proc,
 	 * process header
 	 */
  replied:
-	/* XXX move into routine which can be called from rpc_ctx_xfer_replymsg,
-	 * for (maybe) reduced MP overhead */
-	_seterr_reply(ctx->msg, &(ctx->error));
-	if (ctx->error.re_status == RPC_SUCCESS) {
-		if (!AUTH_VALIDATE(auth, &(ctx->msg->acpted_rply.ar_verf))) {
-			ctx->error.re_status = RPC_AUTHERROR;
-			ctx->error.re_why = AUTH_INVALIDRESP;
-		} else if (xdr_results /* XXX caller setup error? */ &&
-			   !AUTH_UNWRAP(auth, xdrs, xdr_results, results_ptr)) {
-			if (ctx->error.re_status == RPC_SUCCESS)
-				ctx->error.re_status = RPC_CANTDECODERES;
-		}
-		/* free verifier ... */
-		if (ctx->msg->acpted_rply.ar_verf.oa_base != NULL) {
-			xdrs->x_op = XDR_FREE;
-			(void)xdr_opaque_auth(xdrs,
-					      &(ctx->msg->acpted_rply.ar_verf));
-		}
-	} /* end successful completion */
-	else {
+   if (!bidi) {
+      rpc_ctx_decode_replymsg(ctx);
+   }
+   if (ctx->error.re_status != RPC_SUCCESS) {
 		/* maybe our credentials need to be refreshed ... */
 		if (refreshes-- && AUTH_REFRESH(auth, &(ctx->msg))) {
 			rpc_ctx_next_xid(ctx, RPC_CTX_FLAG_NONE);

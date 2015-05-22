@@ -84,6 +84,9 @@ typedef struct rpc_call_ctx {
 			struct rpc_client *clnt;
 			struct x_vc_data *xd;
 			struct timespec timeout;
+			xdrproc_t xdr_results;
+			void *results_ptr;
+			AUTH *auth;
 		} clnt;
 		struct {
 			/* nothing */

@@ -33,7 +33,7 @@
 #define RPC_CTX_FLAG_SYNCDONE 0x0004
 #define RPC_CTX_FLAG_ACKSYNC  0x0008
 
-rpc_ctx_t *alloc_rpc_call_ctx(CLIENT *, rpcproc_t, xdrproc_t,
+rpc_ctx_t *alloc_rpc_call_ctx(CLIENT *, rpcproc_t, AUTH *, xdrproc_t,
 			      void *, xdrproc_t, void *, struct timeval);
 void rpc_ctx_next_xid(rpc_ctx_t *, uint32_t);
 int rpc_ctx_wait_reply(rpc_ctx_t *, uint32_t);
