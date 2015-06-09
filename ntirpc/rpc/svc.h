@@ -348,6 +348,14 @@ struct svc_req {
 	size_t rq_daddr_len;
 };
 
+struct rpcgen_table {
+   bool_t (*proc)(void *, void *, struct svc_req *);
+   xdrproc_t   xdr_arg;
+   unsigned len_arg;
+   xdrproc_t   xdr_res;
+   unsigned len_res;
+};
+
 /*
  *  Approved way of getting address of caller
  */
