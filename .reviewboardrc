@@ -1,0 +1,3 @@
+REVIEWBOARD_URL = "http://reviews.prod.pernixdata.com"
+REPOSITORY = "projects/ntirpc"
+BRANCH = "master"
