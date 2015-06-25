@@ -264,16 +264,7 @@ free_rpc_call_ctx(rpc_ctx_t *ctx, uint32_t flags)
 	struct rpc_dplx_rec *rec = xd->rec;
 	struct timespec ts;
 
-	/* wait for commit of any xfer (ctx specific) */
 	mutex_lock(&ctx->we.mtx);
-	if (ctx->flags & RPC_CTX_FLAG_WAITSYNC) {
-		/* WAITSYNC is already cleared if the call timed out, but it is
-		 * incorrect to wait forever */
-		(void)clock_gettime(CLOCK_REALTIME_FAST, &ts);
-		timespecadd(&ts, &ctx->ctx_u.clnt.timeout);
-		(void)cond_timedwait(&ctx->we.cv, &ctx->we.mtx, &ts);
-	}
-
 	REC_LOCK(rec);
 	opr_rbtree_remove(&xd->cx.calls.t, &ctx->node_k);
 	/* interlock */
