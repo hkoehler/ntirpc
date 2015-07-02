@@ -1157,7 +1157,9 @@ svc_vc_recv(SVCXPRT *xprt, struct svc_req *req)
 
 	/* Advances to next record, will read up to 1024 bytes
 	 * into the stream. */
+   __tracex(TIRPC_TRACE_SVC_VC_READAHEAD_ENTER, xprt);
 	(void)xdr_inrec_readahead(xdrs, 1024);
+   __tracex(TIRPC_TRACE_SVC_VC_READAHEAD_EXIT, xprt);
 
 	if (xdr_dplx_msg(xdrs, req->rq_msg)) {
 		switch (req->rq_msg->rm_direction) {
@@ -1168,6 +1170,7 @@ svc_vc_recv(SVCXPRT *xprt, struct svc_req *req)
 			req->rq_vers = req->rq_msg->rm_call.cb_vers;
 			req->rq_proc = req->rq_msg->rm_call.cb_proc;
 			req->rq_xid = req->rq_msg->rm_xid;
+		   __tracex(TIRPC_TRACE_SVC_VC_REQ_EVENT, xprt);
 			return (TRUE);
 			break;
 		case REPLY:

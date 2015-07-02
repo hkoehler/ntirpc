@@ -215,6 +215,7 @@ svc_ioq(void *a)
 		/* do i/o unlocked */
 		mutex_unlock(&xprt->xp_lock);
 		ioq_flushv(xprt, xd, xioq);
+      __tracex(TIRPC_TRACE_SVC_IOQ_EXIT, xioq);
 		XDR_DESTROY(xioq->xdrs);
 	}
 
@@ -236,6 +237,7 @@ svc_ioq_append(SVCXPRT *xprt, struct x_vc_data *xd, XDR *xdrs)
 
 	/* submit */
 	mutex_lock(&xprt->xp_lock);
+   __tracex(TIRPC_TRACE_SVC_IOQ_ENTER, xioq);
 	TAILQ_INSERT_TAIL(&xd->shared.ioq.q, xioq, ioq_s);
 	(xd->shared.ioq.size)++;
 	if (!xd->shared.ioq.active) {

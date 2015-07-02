@@ -119,6 +119,8 @@ typedef int32_t rpc_inline_t;
 #define TIRPC_SET_DEBUG_FLAGS      10
 #define TIRPC_GET_WARNX            11
 #define TIRPC_SET_WARNX            12
+#define TIRPC_GET_TRACEX           13
+#define TIRPC_SET_TRACEX           14
 
 /*
  * Debug flags support
@@ -158,6 +160,7 @@ typedef void *(*mem_alloc_t) (size_t);
 typedef void (*mem_free_t) (void *, size_t);
 typedef void (*std_free_t) (void *);
 typedef void (*warnx_t) (const char *fmt, ...);
+typedef void (*tracex_t) (int trace_point, void *ctx);
 
 /*
  * Package params support
@@ -166,6 +169,7 @@ typedef struct tirpc_pkg_params {
 	u_int flags;
 	u_int debug_flags;
 	warnx_t warnx;
+	tracex_t tracex;
 } tirpc_pkg_params;
 
 extern tirpc_pkg_params __pkg_params;

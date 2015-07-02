@@ -87,6 +87,12 @@ tirpc_control(const u_int rq, void *in)
 	case TIRPC_SET_WARNX:
 		__pkg_params.warnx = *(warnx_t) in;
 		break;
+   case TIRPC_GET_TRACEX:
+      *(tracex_t *) in = __pkg_params.tracex;
+      break;
+   case TIRPC_SET_TRACEX:
+      __pkg_params.tracex = *(tracex_t) in;
+      break;
 	default:
 		return (false);
 	}

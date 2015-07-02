@@ -73,6 +73,9 @@
 #include <rpc/pmap_clnt.h>
 #include <rpc/pmap_prot.h>
 
+/* Tracer points and callback */
+#include <rpc/rpc_tracer.h>
+
 #ifndef _KERNEL
 #include <rpc/rpcb_clnt.h>	/* rpcbind interface functions */
 #endif

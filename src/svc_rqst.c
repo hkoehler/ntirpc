@@ -864,6 +864,7 @@ svc_rqst_handle_event(struct svc_rqst_rec *sr_rec, struct epoll_event *ev,
 	SVCXPRT *xprt;
 	int code __attribute__ ((unused));
 
+   __tracex(TIRPC_TRACE_EPOLL_EVENT, &sr_rec->id_k);
 	if (ev->data.fd != sr_rec->sv[1]) {
 		xprt = (SVCXPRT *) ev->data.ptr;
 		xp_ev = (struct svc_xprt_ev *)xprt->xp_ev;
@@ -896,7 +897,9 @@ svc_rqst_handle_event(struct svc_rqst_rec *sr_rec, struct epoll_event *ev,
 				SVC_REF(xprt, SVC_REF_FLAG_LOCKED);
 
 				/* ! LOCKED */
+				__tracex(TIRPC_TRACE_GETREQ_ENTER, xprt);
 				code = xprt->xp_ops2->xp_getreq(xprt);
+            __tracex(TIRPC_TRACE_GETREQ_EXIT, xprt);
 				__warnx(TIRPC_DEBUG_FLAG_REFCNT,
 					"%s: post getreq ref %p %u",
 					__func__, xprt,
@@ -937,6 +940,7 @@ svc_rqst_thrd_run_epoll(struct svc_rqst_rec *sr_rec, uint32_t
 		mutex_lock(&sr_rec->mtx);
 
 		++(wakeups);
+		__tracex(TIRPC_TRACE_EPOLL, &sr_rec->id_k);
 
 		/* check for signals */
 		if (sr_rec->signals & SVC_RQST_SIGNAL_SHUTDOWN) {
