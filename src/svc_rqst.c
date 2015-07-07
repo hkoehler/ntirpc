@@ -604,7 +604,7 @@ svc_rqst_evchan_unreg(uint32_t chan_id, SVCXPRT *xprt, uint32_t flags)
 	mutex_unlock(&t->mtx);
 
 	if (sr_rec)
-		sr_rec_release(sr_rec, SVC_RQST_FLAG_SREC_LOCKED);
+		sr_rec_release(sr_rec, SVC_RQST_FLAG_NONE);
 
 	return (code);
 }
