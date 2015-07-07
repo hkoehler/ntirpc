@@ -123,7 +123,7 @@ add_library(ntirpc SHARED
 target_link_libraries(ntirpc ${CMAKE_THREAD_LIBS_INIT})
 
 # fixme!
-set_target_properties(ntirpc PROPERTIES VERSION 4.2.5 SOVERSION 4)
+set_target_properties(ntirpc PROPERTIES VERSION 4.2.6 SOVERSION 4)
 install(TARGETS ntirpc EXPORT NTIRPC LIBRARY DESTINATION lib COMPONENT lib)
 
 ########### install files ###############

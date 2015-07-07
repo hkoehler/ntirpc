@@ -335,8 +335,7 @@ clnt_vc_ncreate2(int fd,	/* open file descriptor */
 #define vc_call_return_slocked(r)		\
 	do {					\
 		result = (r);			\
-		if (!bidi)			\
-			rpc_dplx_suc(clnt);	\
+      rpc_dplx_suc(clnt);	\
 		goto out;			\
 	} while (0)
 
@@ -398,6 +397,7 @@ clnt_vc_call(CLIENT *clnt, AUTH *auth, rpcproc_t proc,
 		   && timeout.tv_usec == 0) ? false : true;
 
  call_again:
+   rpc_dplx_slc(clnt);
 	if (bidi) {
 		/* XXX Until gss_get_mic and gss_wrap can be replaced with
 		 * iov equivalents, replies with RPCSEC_GSS security must be
@@ -411,14 +411,13 @@ clnt_vc_call(CLIENT *clnt, AUTH *auth, rpcproc_t proc,
 				      __svc_params->svc_ioq_maxbuf + 8192,
 				      gss ? IOQ_FLAG_REALLOC : IOQ_FLAG_NONE);
 	} else {
-		rpc_dplx_slc(clnt);
 		xdrs = &(xd->shared.xdrs_out);
 		xdrs->x_lib[0] = (void *)RPC_DPLX_CLNT;
 		xdrs->x_lib[1] = (void *)ctx;	/* thread call ctx */
 	}
 
 	ctx->error.re_status = RPC_SUCCESS;
-	cs->ct_u.ct_mcalli = ntohl(ctx->xid);
+	cs->ct_u.ct_mcalli = ntohl(ctx->xid); /* protect ct_mcalli using send lock */
 
 	if ((!XDR_PUTBYTES(xdrs, cs->ct_u.ct_mcallc, cs->ct_mpos))
 	    || (!XDR_PUTINT32(xdrs, (int32_t *) &proc))
@@ -429,9 +428,8 @@ clnt_vc_call(CLIENT *clnt, AUTH *auth, rpcproc_t proc,
 		/* error case */
 		if (!bidi) {
 			(void)xdrrec_endofrecord(xdrs, true);
-			vc_call_return_slocked(ctx->error.re_status);
-		} else
-			vc_call_return(ctx->error.re_status);
+		}
+      vc_call_return_slocked(ctx->error.re_status);
 	}
 
 	if (bidi) {
@@ -450,8 +448,8 @@ clnt_vc_call(CLIENT *clnt, AUTH *auth, rpcproc_t proc,
 			vc_call_return_slocked(ctx->error.re_status =
 					       RPC_TIMEDOUT);
 
-		rpc_dplx_suc(clnt);
 	}
+   rpc_dplx_suc(clnt);
 
 	/* reply */
 	rpc_dplx_rlc(clnt);
