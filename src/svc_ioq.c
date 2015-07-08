@@ -106,6 +106,7 @@ ioq_flushv(SVCXPRT *xprt, struct x_vc_data *xd,
 	int iw = 0;
 	int ix = 1;
 
+   __tracex(TIRPC_TRACE_SVC_IOQ_FLUSH_ENTER, xioq);
 	if (unlikely(vsize > MAXALLOCA)) {
 		iov = mem_alloc(vsize);
                 if (unlikely(iov == NULL)) {
@@ -191,6 +192,7 @@ ioq_flushv(SVCXPRT *xprt, struct x_vc_data *xd,
 	if (unlikely(vsize > MAXALLOCA)) {
 		mem_free(iov, vsize);
 	}
+   __tracex(TIRPC_TRACE_SVC_IOQ_FLUSH_EXIT, xioq);
 }
 
 void
@@ -214,8 +216,8 @@ svc_ioq(void *a)
 		(xd->shared.ioq.size)--;
 		/* do i/o unlocked */
 		mutex_unlock(&xprt->xp_lock);
-		ioq_flushv(xprt, xd, xioq);
       __tracex(TIRPC_TRACE_SVC_IOQ_EXIT, xioq);
+		ioq_flushv(xprt, xd, xioq);
 		XDR_DESTROY(xioq->xdrs);
 	}
 

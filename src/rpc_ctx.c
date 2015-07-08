@@ -138,6 +138,7 @@ rpc_ctx_decode_replymsg(rpc_ctx_t *ctx)
    void *results_ptr = ctx->ctx_u.clnt.results_ptr;
 
    _seterr_reply(ctx->msg, &(ctx->error));
+   __tracex(TIRPC_TRACE_RPC_CALL_DECODE_REPLY_ENTER, ctx);
    if (ctx->error.re_status == RPC_SUCCESS) {
       if (!AUTH_VALIDATE(auth, &(ctx->msg->acpted_rply.ar_verf))) {
          ctx->error.re_status = RPC_AUTHERROR;
@@ -154,6 +155,7 @@ rpc_ctx_decode_replymsg(rpc_ctx_t *ctx)
                      &(ctx->msg->acpted_rply.ar_verf));
       }
    }
+   __tracex(TIRPC_TRACE_RPC_CALL_DECODE_REPLY_EXIT, ctx);
 }
 
 bool
@@ -179,6 +181,7 @@ rpc_ctx_xfer_replymsg(struct x_vc_data *xd, struct rpc_msg *msg)
 		REC_UNLOCK(xd->rec);
       rpc_ctx_decode_replymsg(ctx);
       mutex_lock(&ctx->we.mtx);
+      __tracex(TIRPC_TRACE_RPC_CALL_REPLY_READY_ENTER, ctx);
       ctx->flags |= RPC_CTX_FLAG_SYNCDONE;
       mutex_unlock(&ctx->we.mtx);
       cond_signal(&ctx->we.cv);
@@ -228,6 +231,7 @@ rpc_ctx_wait_reply(rpc_ctx_t *ctx, uint32_t flags)
          ctx->flags |= RPC_CTX_FLAG_SYNCDONE;
 			goto out;
 		} else {
+	      __tracex(TIRPC_TRACE_RPC_CALL_REPLY_READY_EXIT, ctx);
 	      __warnx(TIRPC_DEBUG_FLAG_RPC_CTX,
 	         "%s: reply ready (xid %d, client %p, dir %d)",
 	         __func__, ctx->xid, clnt, ctx->msg->rm_direction);

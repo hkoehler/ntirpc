@@ -36,20 +36,26 @@
 /* List of trace points and their context pointer type */
 typedef enum
 {
-   TIRPC_TRACE_EPOLL = 0,                    /* uint32_t channel ID (event) */
-   TIRPC_TRACE_EPOLL_EVENT,                  /* uint32_t channel ID (event) */
-   TIRPC_TRACE_GETREQ_ENTER,                 /* SVCXPRT export */
-   TIRPC_TRACE_GETREQ_EXIT,                  /* SVCXPRT export */
-   TIRPC_TRACE_SVC_VC_READAHEAD_ENTER,       /* SVCXPRT export (enter/exit) */
-   TIRPC_TRACE_SVC_VC_READAHEAD_EXIT,        /* SVCXPRT export (enter/exit) */
-   TIRPC_TRACE_SVC_VC_REQ_EVENT,             /* SVCXPRT export (enter/exit) */
-   TIRPC_TRACE_SVC_IOQ_ENTER,                /* xdr_ioq (event) */
-   TIRPC_TRACE_SVC_IOQ_EXIT,                 /* xdr_ioq (event) */
-   TIRPC_TRACE_RPC_CALL,                     /* rpc_ctx_t (ctx) */
-   TIRPC_TRACE_RPC_CALL_XFER_REPLY,          /* rpc_ctx_t (ctx) */
-   TIRPC_TRACE_RPC_CALL_WAIT_REPLY_ENTER,    /* rpc_ctx_t (ctx) */
-   TIRPC_TRACE_RPC_CALL_WAIT_REPLY_EXIT,     /* rpc_ctx_t (ctx) */
-   TIRPC_TRACE_RPC_CALL_WAIT_REPLY_TIMEOUT,  /* rpc_ctx_t (ctx) */
+   TIRPC_TRACE_EPOLL = 0,                    /* uint32_t channel ID */
+   TIRPC_TRACE_EPOLL_EVENT,                  /* uint32_t channel ID */
+   TIRPC_TRACE_GETREQ_ENTER,                 /* thread-specific pointer */
+   TIRPC_TRACE_GETREQ_EXIT,                  /* thread-specific pointer */
+   TIRPC_TRACE_SVC_VC_READAHEAD_ENTER,       /* SVCXPRT export */
+   TIRPC_TRACE_SVC_VC_READAHEAD_EXIT,        /* SVCXPRT export */
+   TIRPC_TRACE_SVC_VC_REQ_EVENT,             /* SVCXPRT export */
+   TIRPC_TRACE_SVC_IOQ_ENTER,                /* xdr_ioq */
+   TIRPC_TRACE_SVC_IOQ_EXIT,                 /* xdr_ioq */
+   TIRPC_TRACE_SVC_IOQ_FLUSH_ENTER,          /* xdr_ioq */
+   TIRPC_TRACE_SVC_IOQ_FLUSH_EXIT,           /* xdr_ioq */
+   TIRPC_TRACE_RPC_CALL,                     /* rpc_ctx_t */
+   TIRPC_TRACE_RPC_CALL_XFER_REPLY,          /* rpc_ctx_t */
+   TIRPC_TRACE_RPC_CALL_REPLY_READY_ENTER,   /* rpc_ctx_t */
+   TIRPC_TRACE_RPC_CALL_REPLY_READY_EXIT,    /* rpc_ctx_t */
+   TIRPC_TRACE_RPC_CALL_WAIT_REPLY_ENTER,    /* rpc_ctx_t */
+   TIRPC_TRACE_RPC_CALL_WAIT_REPLY_EXIT,     /* rpc_ctx_t */
+   TIRPC_TRACE_RPC_CALL_WAIT_REPLY_TIMEOUT,  /* rpc_ctx_t */
+   TIRPC_TRACE_RPC_CALL_DECODE_REPLY_ENTER,  /* rpc_ctx_t */
+   TIRPC_TRACE_RPC_CALL_DECODE_REPLY_EXIT,   /* rpc_ctx_t */
    TIRPC_TRACE_MAX
 } TIRPC_TRACE_POINTS;
 

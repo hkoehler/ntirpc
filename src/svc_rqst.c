@@ -897,9 +897,9 @@ svc_rqst_handle_event(struct svc_rqst_rec *sr_rec, struct epoll_event *ev,
 				SVC_REF(xprt, SVC_REF_FLAG_LOCKED);
 
 				/* ! LOCKED */
-				__tracex(TIRPC_TRACE_GETREQ_ENTER, xprt);
+				__tracex(TIRPC_TRACE_GETREQ_ENTER, &xprt); /* use &xprt as thread-specific ptr */
 				code = xprt->xp_ops2->xp_getreq(xprt);
-            __tracex(TIRPC_TRACE_GETREQ_EXIT, xprt);
+            __tracex(TIRPC_TRACE_GETREQ_EXIT, &xprt);
 				__warnx(TIRPC_DEBUG_FLAG_REFCNT,
 					"%s: post getreq ref %p %u",
 					__func__, xprt,
