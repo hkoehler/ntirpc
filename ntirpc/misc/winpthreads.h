@@ -175,6 +175,7 @@ typedef long pthread_spinlock_t;
 typedef int pthread_condattr_t;
 typedef CONDITION_VARIABLE pthread_cond_t;
 typedef int pthread_rwlockattr_t;
+typedef DWORD pid_t;
 
 volatile long _pthread_cancelling;
 
@@ -457,6 +458,12 @@ pthread_t pthread_self(void)
 	}
 
 	return t;
+}
+
+static inline pid_t
+gettid(void)
+{
+   return GetCurrentThreadId();
 }
 
 static int

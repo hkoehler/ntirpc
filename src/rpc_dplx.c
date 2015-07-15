@@ -53,15 +53,37 @@
 void
 rpc_dplx_slxi(SVCXPRT *xprt, const char *func, int line)
 {
-	struct rpc_dplx_rec *rec = (struct rpc_dplx_rec *)xprt->xp_p5;
-	rpc_dplx_lock_t *lk = &rec->send.lock;
-	mutex_lock(&lk->we.mtx);
-	if (__pkg_params.debug_flags & TIRPC_DEBUG_FLAG_LOCK) {
+   struct rpc_dplx_rec *rec = (struct rpc_dplx_rec *)xprt->xp_p5;
+   rpc_dplx_lock_t *lk = &rec->send.lock;
+   int ret;
+
+   ret = mutex_lock(&lk->we.mtx);
+   assert(ret == 0);
+   if (ret == 0 && __pkg_params.debug_flags & TIRPC_DEBUG_FLAG_LOCK) {
       assert(lk->locktrace.locked == FALSE);
-		lk->locktrace.func = (char *)func;
-		lk->locktrace.line = line;
+      lk->locktrace.func = (char *)func;
+      lk->locktrace.line = line;
       lk->locktrace.locked = TRUE;
-	}
+      lk->locktrace.owner = gettid();
+   }
+}
+
+int
+rpc_dplx_stlxi(SVCXPRT *xprt, const char *func, int line)
+{
+   int ret;
+   struct rpc_dplx_rec *rec = (struct rpc_dplx_rec *)xprt->xp_p5;
+   rpc_dplx_lock_t *lk = &rec->send.lock;
+
+   ret = mutex_trylock(&lk->we.mtx);
+   if (ret == 0 && __pkg_params.debug_flags & TIRPC_DEBUG_FLAG_LOCK) {
+      assert(lk->locktrace.locked == FALSE);
+      lk->locktrace.func = (char *)func;
+      lk->locktrace.line = line;
+      lk->locktrace.locked = TRUE;
+      lk->locktrace.owner = gettid();
+   }
+   return ret;
 }
 
 void
@@ -70,6 +92,7 @@ rpc_dplx_sux(SVCXPRT *xprt)
 	struct rpc_dplx_rec *rec = (struct rpc_dplx_rec *)xprt->xp_p5;
    if (__pkg_params.debug_flags & TIRPC_DEBUG_FLAG_LOCK) {
       assert(rec->send.lock.locktrace.locked == TRUE);
+      assert(rec->send.lock.locktrace.owner == gettid());
       rec->send.lock.locktrace.locked = FALSE;
    }
 	mutex_unlock(&rec->send.lock.we.mtx);
@@ -86,6 +109,7 @@ rpc_dplx_rlxi(SVCXPRT *xprt, const char *func, int line)
 		lk->locktrace.func = (char *)func;
 		lk->locktrace.line = line;
       lk->locktrace.locked = TRUE;
+      lk->locktrace.owner = gettid();
 	}
 }
 
@@ -95,6 +119,7 @@ rpc_dplx_rux(SVCXPRT *xprt)
 	struct rpc_dplx_rec *rec = (struct rpc_dplx_rec *)xprt->xp_p5;
    if (__pkg_params.debug_flags & TIRPC_DEBUG_FLAG_LOCK) {
       assert(rec->recv.lock.locktrace.locked == TRUE);
+      assert(rec->recv.lock.locktrace.owner == gettid());
       rec->recv.lock.locktrace.locked = FALSE;
    }
 	mutex_unlock(&rec->recv.lock.we.mtx);
@@ -112,6 +137,7 @@ rpc_dplx_slci(CLIENT *clnt, const char *func, int line)
 		lk->locktrace.func = (char *)func;
 		lk->locktrace.line = line;
       lk->locktrace.locked = TRUE;
+      lk->locktrace.owner = gettid();
 	}
 }
 
@@ -121,6 +147,7 @@ rpc_dplx_suc(CLIENT *clnt)
 	struct rpc_dplx_rec *rec = (struct rpc_dplx_rec *)clnt->cl_p2;
    if (__pkg_params.debug_flags & TIRPC_DEBUG_FLAG_LOCK) {
       assert(rec->send.lock.locktrace.locked == TRUE);
+      assert(rec->send.lock.locktrace.owner == gettid());
       rec->send.lock.locktrace.locked = FALSE;
    }
 	mutex_unlock(&rec->send.lock.we.mtx);
@@ -138,6 +165,7 @@ rpc_dplx_rlci(CLIENT *clnt, const char *func, int line)
 		lk->locktrace.func = (char *)func;
       lk->locktrace.line = line;
       lk->locktrace.locked = TRUE;
+      lk->locktrace.owner = gettid();
 	}
 }
 
@@ -147,6 +175,7 @@ rpc_dplx_ruc(CLIENT *clnt)
 	struct rpc_dplx_rec *rec = (struct rpc_dplx_rec *)clnt->cl_p2;
    if (__pkg_params.debug_flags & TIRPC_DEBUG_FLAG_LOCK) {
       assert(rec->recv.lock.locktrace.locked == TRUE);
+      assert(rec->recv.lock.locktrace.owner == gettid());
       rec->recv.lock.locktrace.locked = FALSE;
    }
 	mutex_unlock(&rec->recv.lock.we.mtx);
@@ -327,6 +356,7 @@ rpc_dplx_slfi(int fd, const char *func, int line)
 		lk->locktrace.func = (char *)func;
 		lk->locktrace.line = line;
       lk->locktrace.locked = TRUE;
+      lk->locktrace.owner = gettid();
 	}
 
 }
@@ -340,6 +370,7 @@ rpc_dplx_suf(int fd)
 	/* assert: initialized */
    if (__pkg_params.debug_flags & TIRPC_DEBUG_FLAG_LOCK) {
       assert(rec->send.lock.locktrace.locked == TRUE);
+      assert(rec->send.lock.locktrace.owner == gettid());
       rec->send.lock.locktrace.locked = FALSE;
    }
 	mutex_unlock(&rec->send.lock.we.mtx);
@@ -359,6 +390,7 @@ rpc_dplx_rlfi(int fd, const char *func, int line)
 		lk->locktrace.func = (char *)func;
 		lk->locktrace.line = line;
       lk->locktrace.locked = TRUE;
+      lk->locktrace.owner = gettid();
 	}
 }
 

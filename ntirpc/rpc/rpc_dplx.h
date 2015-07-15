@@ -35,6 +35,9 @@
 /* slxi: send lock xprt impl */
 void rpc_dplx_slxi(SVCXPRT *xprt, const char *file, int line);
 
+/* stlxi: send try lock xprt impl */
+int rpc_dplx_stlxi(SVCXPRT *xprt, const char *file, int line);
+
 /* sux: send unlock xprt */
 void rpc_dplx_sux(SVCXPRT *xprt);
 

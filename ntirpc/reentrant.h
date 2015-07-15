@@ -41,6 +41,8 @@
 #if defined(_WIN32)
 #include <misc/winpthreads.h>
 #else
+#include <unistd.h>
+#include <sys/syscall.h>
 #include <pthread.h>
 #endif
 
@@ -75,6 +77,14 @@ mutex_init(pthread_mutex_t *m, const pthread_mutexattr_t *a
 
 	return (rslt);
 }
+
+#if defined(__linux__)
+static inline pid_t
+gettid(void)
+{
+    return syscall(SYS_gettid);
+}
+#endif
 
 #define mutex_lock(m)		pthread_mutex_lock(m)
 #define mutex_trylock(m)		pthread_mutex_trylock(m)

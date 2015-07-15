@@ -58,6 +58,7 @@ typedef struct rpc_dplx_lock {
 		const char *func;
 		int line;
 		int locked;
+		pid_t owner;
 	} locktrace;
 } rpc_dplx_lock_t;
 
@@ -134,6 +135,7 @@ struct cu_data {
 };
 
 struct ct_serialized {
+   mutex_t ct_lock;
 	union {
 		char ct_mcallc[MCALL_MSG_SIZE];	/* marshalled callmsg */
 		u_int32_t ct_mcalli;

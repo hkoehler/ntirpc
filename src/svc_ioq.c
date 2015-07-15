@@ -28,6 +28,8 @@
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/poll.h>
+#include <sys/ioctl.h>
+#include <linux/sockios.h>
 
 #include <sys/un.h>
 #include <sys/time.h>
@@ -91,6 +93,28 @@ cfconn_set_dead(SVCXPRT *xprt, struct x_vc_data *xd)
 
 #define LAST_FRAG ((u_int32_t)(1 << 31))
 #define MAXALLOCA (256)
+
+
+static inline bool
+svc_ioq_check_send_buf(SVCXPRT *xprt, struct x_vc_data *xd,
+                       struct xdr_ioq *xioq)
+{
+#if defined(__linux__)
+   int outq_size;
+   int result;
+
+   result = ioctl(xprt->xp_fd, SIOCOUTQ, &outq_size);
+   if (unlikely(result < 0)) {
+      __warnx(TIRPC_DEBUG_FLAG_SVC_VC, "ioctl(SIOCOUTQ) failed %d\n",
+         __func__, errno);
+      return FALSE;
+   }
+   return outq_size + xioq->ioq.frag_len + sizeof(u_int32_t) <= xd->shared.sendsz;
+#else
+   return FALSE;
+#endif
+}
+
 
 static inline void
 ioq_flushv(SVCXPRT *xprt, struct x_vc_data *xd,
@@ -195,34 +219,44 @@ ioq_flushv(SVCXPRT *xprt, struct x_vc_data *xd,
    __tracex(TIRPC_TRACE_SVC_IOQ_FLUSH_EXIT, xioq);
 }
 
+/* Flush single XDR. Must hold send lock. */
+static inline int
+svc_ioq_flush_one(SVCXPRT *xprt, struct x_vc_data *xd, bool_t nonblocking)
+{
+   struct xdr_ioq *xioq = NULL;
+
+   mutex_lock(&xprt->xp_lock);
+   if (unlikely((!xd->shared.ioq.size) || ioq_shutdown)) {
+      xd->shared.ioq.active = false;
+      mutex_unlock(&xprt->xp_lock);
+      return ENODATA;
+   }
+   xioq = TAILQ_FIRST(&xd->shared.ioq.q);
+   if (nonblocking && svc_ioq_check_send_buf(xprt, xd, xioq) == FALSE) {
+      mutex_unlock(&xprt->xp_lock);
+      return EWOULDBLOCK;
+   }
+   TAILQ_REMOVE(&xd->shared.ioq.q, xioq, ioq_s);
+   (xd->shared.ioq.size)--;
+   mutex_unlock(&xprt->xp_lock);
+   __tracex(TIRPC_TRACE_SVC_IOQ_EXIT, xioq);
+   ioq_flushv(xprt, xd, xioq);
+   XDR_DESTROY(xioq->xdrs);
+   return 0;
+}
+
 void
 svc_ioq(void *a)
 {
-	struct svc_ioq_args *arg = (struct svc_ioq_args *)a;
-	SVCXPRT *xprt = arg->xprt;
-	struct x_vc_data *xd = arg->xd;
-	struct xdr_ioq *xioq = NULL;
+   struct svc_ioq_args *arg = (struct svc_ioq_args *)a;
+   SVCXPRT *xprt = arg->xprt;
+   struct x_vc_data *xd = arg->xd;
 
-	mem_free(arg, sizeof(struct svc_ioq_args));
-	for (;;) {
-		mutex_lock(&xprt->xp_lock);
-		if (unlikely((!xd->shared.ioq.size) || ioq_shutdown)) {
-			xd->shared.ioq.active = false;
-			SVC_RELEASE(xprt, SVC_RELEASE_FLAG_LOCKED);
-			goto out;
-		}
-		xioq = TAILQ_FIRST(&xd->shared.ioq.q);
-		TAILQ_REMOVE(&xd->shared.ioq.q, xioq, ioq_s);
-		(xd->shared.ioq.size)--;
-		/* do i/o unlocked */
-		mutex_unlock(&xprt->xp_lock);
-      __tracex(TIRPC_TRACE_SVC_IOQ_EXIT, xioq);
-		ioq_flushv(xprt, xd, xioq);
-		XDR_DESTROY(xioq->xdrs);
-	}
-
- out:
-	return;
+   mem_free(arg, sizeof(struct svc_ioq_args));
+   rpc_dplx_slxi(xprt, __FUNCTION__, __LINE__);
+   while (!svc_ioq_flush_one(xprt, xd, FALSE)) {}
+   rpc_dplx_sux(xprt);
+   SVC_RELEASE(xprt, SVC_RELEASE_FLAG_NONE);
 }
 
 void
@@ -230,6 +264,7 @@ svc_ioq_append(SVCXPRT *xprt, struct x_vc_data *xd, XDR *xdrs)
 {
 	struct xdr_ioq *xioq = xdrs->x_private;
 	bool qdrain = atomic_fetch_uint32_t(&ioq_shutdown);
+	bool qio = FALSE;
 
 	/* discard */
 	if (unlikely(qdrain)) {
@@ -242,16 +277,32 @@ svc_ioq_append(SVCXPRT *xprt, struct x_vc_data *xd, XDR *xdrs)
    __tracex(TIRPC_TRACE_SVC_IOQ_ENTER, xioq);
 	TAILQ_INSERT_TAIL(&xd->shared.ioq.q, xioq, ioq_s);
 	(xd->shared.ioq.size)++;
-	if (!xd->shared.ioq.active) {
-		struct svc_ioq_args *arg =
-		    mem_alloc(sizeof(struct svc_ioq_args));
-		arg->xprt = xprt;
-		arg->xd = xd;
-		xd->shared.ioq.active = true;
-		SVC_REF(xprt, SVC_REF_FLAG_LOCKED);	/* !LOCKED */
-		thrdpool_submit_work(&pool, svc_ioq, arg);
-	} else
-		mutex_unlock(&xprt->xp_lock);
+   mutex_unlock(&xprt->xp_lock);
+
+   /* fast path - try sending in-line */
+   if (!rpc_dplx_stlxi(xprt, __FUNCTION__, __LINE__)) {
+      if (svc_ioq_flush_one(xprt, xd, TRUE) == EWOULDBLOCK) {
+         qio = TRUE;
+      }
+      rpc_dplx_sux(xprt);
+   } else {
+      qio = TRUE;
+   }
+
+   /* slow path - send using ioq thread */
+   if (qio) {
+      mutex_lock(&xprt->xp_lock);
+      if (!xd->shared.ioq.active && xd->shared.ioq.size > 0) {
+         struct svc_ioq_args *arg =
+                  mem_alloc(sizeof(struct svc_ioq_args));
+         arg->xprt = xprt;
+         arg->xd = xd;
+         xd->shared.ioq.active = true;
+         SVC_REF(xprt, SVC_REF_FLAG_LOCKED);    /* !LOCKED */
+         thrdpool_submit_work(&pool, svc_ioq, arg);
+      } else
+         mutex_unlock(&xprt->xp_lock);
+   }
 }
 
 void
