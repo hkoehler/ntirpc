@@ -29,7 +29,9 @@
 #include <sys/param.h>
 #include <sys/poll.h>
 #include <sys/ioctl.h>
-#include <linux/sockios.h>
+#if defined(__linux__)
+#  include <linux/sockios.h>
+#endif
 
 #include <sys/un.h>
 #include <sys/time.h>
