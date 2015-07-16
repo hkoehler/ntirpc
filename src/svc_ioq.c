@@ -136,7 +136,7 @@ ioq_flushv(SVCXPRT *xprt, struct x_vc_data *xd,
 	if (unlikely(vsize > MAXALLOCA)) {
 		iov = mem_alloc(vsize);
                 if (unlikely(iov == NULL)) {
-                        __warnx(TIRPC_DEBUG_FLAG_SVC_VC, "malloc failed %d\n",
+                        __warnx(TIRPC_DEBUG_FLAG_SVC_VC, "malloc failed %s errno=%d\n",
                                 __func__, errno);
                         cfconn_set_dead(xprt, xd);
                         return;
@@ -186,7 +186,9 @@ ioq_flushv(SVCXPRT *xprt, struct x_vc_data *xd,
 		}
 
 		/* blocking write */
-		result = writev(xprt->xp_fd, wiov, iw);
+		do {
+			result = writev(xprt->xp_fd, wiov, iw);
+		} while (result < 0 && (errno == EAGAIN || errno == EWOULDBLOCK));
 		remaining -= result;
 
 		if (result == fbytes) {
@@ -195,7 +197,7 @@ ioq_flushv(SVCXPRT *xprt, struct x_vc_data *xd,
 			continue;
 		}
 		if (unlikely(result < 0)) {
-			__warnx(TIRPC_DEBUG_FLAG_SVC_VC, "writev failed %d\n",
+			__warnx(TIRPC_DEBUG_FLAG_SVC_VC, "writev failed %s errno=%d\n",
 				__func__, errno);
 			cfconn_set_dead(xprt, xd);
 			break;
